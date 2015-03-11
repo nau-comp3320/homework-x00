@@ -1,0 +1,144 @@
+Homework x00: Adding an attribute grammar
+=========================================
+
+For this homework assignment, you will be finishing up the project that you
+started in homework01.  In that homework, you started by creating a simple
+grammar for mathematical expressions and defining static semantics for that
+grammar.  Unfortunately, the grammar from homework01 was not an LL-grammar, so
+in homework02 you used an LL grammar so that you can parse these mathematical
+expressions.  In this assignment, you add attributes to that LL grammar and
+modify the program so that the various tree nodes will be able to produce both
+a type and a value.  By the end of the assignment, you will have effectively
+written a small interpreter for these expressions.
+
+Objectives
+----------
+
+* Be able to define an attribute grammar that relies on both inherited and
+  synthetic attributes
+* Understand how such a grammar works by implementing it
+
+Grading
+-------
+
+As with the previous assignments, part of your grade will be determined as
+a function of class participation through Piazza or with me.  To get full
+credit, you should try to help your classmates.  Remember that just giving
+someone an answer to the assignment is considered academic dishonesty. Instead,
+try to guide your peers to the correct solution.  This should be a learning
+experience for all of you.
+
+
+Procedure
+---------
+
+### Create an attribute LL grammar
+
+As a starting point for this assignment, you have the following LL grammar in EBNF:
+
+.The LL grammar in EBNF
+================================================================================
+ExpressionNode → TermNode ExpressionPrimeNode
+
+ExpressionPrimeNode → ( AddOpToken | SubtractOpToken ) TermNode ExpressionPrimeNode | ε
+
+TermNode → FactorNode TermPrimeNode
+
+TermPrimeNode → ( MultiplyOpToken | DivideOpToken ) FactorNode TermPrimeNode | ε
+
+FactorNode → BaseNode { ExponentOpToken FactorNode }
+
+BaseNode → IntegerToken | DecimalToken | LeftParenthesisToken ExpressionNode RightParenthesisToken
+
+================================================================================
+
+Each non-terminal will have at least two attributes, *value* and *type*.  Some
+nodes will require two additional attributes: *lhs_value* and *lhs_type*.  For
+each of these rules, define the attribute rules that are necessary to determine
+*value* and *type*.  Remember that *value* should reflect the mathematical
+value at the node, and *type* will be one of `:integer` or `:decimal`.  Recall
+that any operation involving a decimal will result in a `:decimal` type.
+
+Here are a couple of examples to get you started:
+
+.A couple of attribute rules
+[options="header"]
+|===============================================================================
+| Syntax rule   | Attribute rule
+
+| ExpressionNode → TermNode ExpressionPrimeNode
+| ExpressionNode.type ← ExpressionPrimeNode.type +
+  ExpressionNode.value ← ExpressionPrimeNode.value +
+  ExpressionPrimeNode.lhs_type ← TermNode.type +
+  ExpressionPrimeNode.lhs_value ← TermNode.value
+
+| BaseNode → IntegerToken
+| BaseNode.type ← `:integer` +
+  BaseNode.value ← IntegerToken.value
+|===============================================================================
+
+
+=== Implementing the attribute grammar
+
+The next phase of this assignment is to implement the attribute grammar you
+defined above.  You will achieve this by modifying the various node classes in
+`ast_node.rb` so that they have 'type' and 'value' attributes.  If you examine
+the source for ASTNode, you will notice it declares these using `attr_reader`
+and instantiates matching instance variables `@type` and `@value` to `nil`.
+
+To guide you through this process, I have provided a number of tests for you
+that you can enable sequentially.  Remember that you can do this by removing
+the `DISABLED_` prefix from each test name in `ast_node_test.rb`.
+
+Here's an outline of the steps you will take:
+
+`test_integer_base_node`::
+`test_decimal_base_node`::
+  Here, you will be testing building a BaseNode from an IntegerToken and a
+  DecimalToken.  These should be relatively straightforward.  In these cases,
+  'type' and 'value' are synthetic attributes, so you should just be able to
+  set `@type` and `@value`.
+
+`test_base_factor_node`::
+  This should also be relatively straightforward.  This is the case where
+  FactorNode only has a single BaseNode child.
+
+`test_exponent_factor_node`::
+`test_two_exponent_factor_node`::
+`test_three_exponent_factor_node`::
+  These tests are when things start to become somewhat tricky.  Recall that a
+  FactorNode can have any number of exponents.  We only test for up to three
+  exponents.  Nonetheless, our attributes are still synthetic at this level.
+
+`test_epsilon_term_prime_node`::
+  Now with TermPrimeNode, we have the case of an ε node.  Here, we have our
+  first inherited attributes, 'lhs_type' and 'lhs_vlue'.  As you can see in the
+  test, in order to get the 'type' or 'value' of the node, we must first set
+  the 'lhs_type' and 'lhs_value'.
+
+`test_multiply_term_prime_node`::
+`test_divide_term_prime_node`::
+  In these we test the case where the TermPrimeNode is composed of a operation
+  token, a FactorNode, and another TermPrimeNode.  Again, the test explicitly
+  sets 'lhs_type' and 'lhs_value' the node.
+
+`test_term_node`::
+  Next we consider the case of a TermNode, which contains a FactorNode and a
+  TermPrimeNode.  Note that here there is no need to set a 'lhs_type' or
+  'lhs_value'.
+
+`test_epsilon_expression_prime_node`::
+`test_addition_expression_prime_node`::
+`test_subtraction_expression_prime_node`::
+`test_expression_node`::
+  These all handle ExpressionPrimeNode and ExpressionNode.  The work very
+  similarly to the term nodes.
+
+`test_expression_base_node`::
+  Finally, we revist BaseNode and handle the case where it is a parenthesised
+  expression.
+
+=== See it run
+
+Now that you have completed the project, you can `rake run` and see your work
+in action.  Congratulations!
