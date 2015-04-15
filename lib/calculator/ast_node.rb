@@ -27,8 +27,8 @@ module Calculator
     # Creates a new node with the given children
     def initialize(*children)
       @children = children
-      @type = nil
-      @value = nil
+      @type = children.type
+      @value = children.value
     end
 
     # Returns a semi-friendly string representation of the node
